@@ -25,8 +25,8 @@ import numpy as np
 from factorlab_risk._validation import FloatArray, as_return_vector, tail_alpha
 
 __all__ = [
-    "historical_var",
     "historical_expected_shortfall",
+    "historical_var",
     "tail_loss",
     "worst_loss",
 ]

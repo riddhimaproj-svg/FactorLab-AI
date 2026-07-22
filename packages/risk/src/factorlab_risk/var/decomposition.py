@@ -33,12 +33,12 @@ from factorlab_risk._validation import (
 from factorlab_risk.errors import DimensionMismatchError
 
 __all__ = [
-    "portfolio_volatility",
-    "portfolio_var",
-    "marginal_var",
     "component_var",
-    "percent_contribution_var",
     "incremental_var",
+    "marginal_var",
+    "percent_contribution_var",
+    "portfolio_var",
+    "portfolio_volatility",
 ]
 
 
@@ -55,7 +55,7 @@ def portfolio_volatility(weights: object, covariance: object) -> float:
     w = as_weights(weights)
     cov = as_covariance(covariance)
     _check(w, cov)
-    return float(np.sqrt(max(w @ cov @ w, 0.0)))
+    return float(np.sqrt(max(float(w @ cov @ w), 0.0)))
 
 
 def portfolio_var(
@@ -75,10 +75,10 @@ def marginal_var(
     w = as_weights(weights)
     cov = as_covariance(covariance)
     _check(w, cov)
-    sigma_p = float(np.sqrt(max(w @ cov @ w, 0.0)))
+    sigma_p = float(np.sqrt(max(float(w @ cov @ w), 0.0)))
     if sigma_p == 0.0:
         return np.zeros_like(w)
-    return _z(confidence) * np.sqrt(horizon) * (cov @ w) / sigma_p
+    return np.asarray(_z(confidence) * np.sqrt(horizon) * (cov @ w) / sigma_p, dtype=np.float64)
 
 
 def component_var(
@@ -86,7 +86,7 @@ def component_var(
 ) -> FloatArray:
     r"""Component VaR, :math:`w_i\,\mathrm{MVaR}_i`; sums to total VaR."""
     w = as_weights(weights)
-    return w * marginal_var(w, covariance, confidence, horizon)
+    return np.asarray(w * marginal_var(w, covariance, confidence, horizon), dtype=np.float64)
 
 
 def percent_contribution_var(

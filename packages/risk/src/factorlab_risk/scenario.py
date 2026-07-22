@@ -25,7 +25,7 @@ import numpy as np
 from factorlab_risk._validation import FloatArray, as_weights
 from factorlab_risk.errors import DimensionMismatchError, RiskInputError
 
-__all__ = ["Scenario", "ScenarioOutcome", "SensitivityResult", "ScenarioEngine"]
+__all__ = ["Scenario", "ScenarioEngine", "ScenarioOutcome", "SensitivityResult"]
 
 
 @dataclass(frozen=True, slots=True)

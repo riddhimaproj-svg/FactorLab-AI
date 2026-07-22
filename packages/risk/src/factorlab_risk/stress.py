@@ -17,6 +17,7 @@ often historical or regulatory, adverse scenarios.  This module provides:
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -30,15 +31,18 @@ from factorlab_risk.errors import DimensionMismatchError, RiskInputError
 from factorlab_risk.scenario import Scenario, ScenarioEngine
 from factorlab_risk.var.decomposition import portfolio_var
 
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from factorlab_risk.reports import StressTestReport
+
 __all__ = [
-    "market_crash_scenario",
-    "interest_rate_shock_scenario",
-    "factor_shock_scenario",
-    "sector_shock_scenario",
-    "historical_scenario",
     "VolatilityShockResult",
-    "volatility_shock",
+    "factor_shock_scenario",
+    "historical_scenario",
+    "interest_rate_shock_scenario",
+    "market_crash_scenario",
     "run_stress_test",
+    "sector_shock_scenario",
+    "volatility_shock",
 ]
 
 
@@ -50,7 +54,7 @@ def market_crash_scenario(
     Without ``betas`` every asset takes the full ``magnitude`` (beta = 1).
     """
     if betas is None:
-        shocks = {a: magnitude for a in assets}
+        shocks = dict.fromkeys(assets, magnitude)
     else:
         if len(betas) != len(assets):
             raise DimensionMismatchError(len(assets), len(betas), name="betas")
@@ -126,7 +130,7 @@ def historical_scenario(
 class VolatilityShockResult:
     """Base vs shocked VaR when the covariance is scaled by a volatility multiplier."""
 
-    __slots__ = ("vol_multiplier", "base_var", "shocked_var")
+    __slots__ = ("base_var", "shocked_var", "vol_multiplier")
 
     def __init__(self, vol_multiplier: float, base_var: float, shocked_var: float) -> None:
         self.vol_multiplier = vol_multiplier
@@ -173,7 +177,7 @@ def run_stress_test(
     weights: object,
     scenarios: Sequence[Scenario],
     portfolio_value: float = 1.0,
-):  # type: ignore[no-untyped-def]
+) -> StressTestReport:
     """Revalue ``weights`` across ``scenarios`` and return a StressTestReport."""
     from factorlab_risk.reports import StressTestReport
 

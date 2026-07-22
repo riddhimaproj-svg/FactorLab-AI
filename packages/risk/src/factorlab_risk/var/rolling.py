@@ -16,7 +16,7 @@ from factorlab_risk.errors import RiskInputError
 from factorlab_risk.var.historical import historical_expected_shortfall, historical_var
 from factorlab_risk.var.parametric import parametric_expected_shortfall, parametric_var
 
-__all__ = ["rolling_var", "rolling_expected_shortfall"]
+__all__ = ["rolling_expected_shortfall", "rolling_var"]
 
 
 def _validate_window(n: int, window: int) -> None:

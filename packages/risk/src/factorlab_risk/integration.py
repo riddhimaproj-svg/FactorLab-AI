@@ -14,6 +14,8 @@ composes end to end.
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import numpy as np
 
 from factorlab_risk._validation import FloatArray
@@ -27,9 +29,9 @@ from factorlab_risk.var import (
 __all__ = [
     "extract_returns",
     "extract_weights",
-    "var_report_from_returns",
     "risk_report_from_weights",
     "snapshot_from_returns_and_weights",
+    "var_report_from_returns",
 ]
 
 
@@ -54,12 +56,13 @@ def extract_returns(source: object) -> FloatArray:
 def extract_weights(source: object) -> tuple[tuple[str, ...], FloatArray]:
     """Pull ``(assets, weights)`` from PortfolioWeights / OptimizationResult / mapping."""
     # OptimizationResult exposes `.weights` (a PortfolioWeights).
-    inner = getattr(source, "weights", None)
+    inner = cast(Any, getattr(source, "weights", None))
     if inner is not None and hasattr(inner, "assets") and hasattr(inner, "values"):
         return tuple(inner.assets), np.asarray(inner.values, dtype=np.float64)
     # PortfolioWeights exposes `.assets` and `.values`.
     if hasattr(source, "assets") and hasattr(source, "values"):
-        return tuple(source.assets), np.asarray(source.values, dtype=np.float64)  # type: ignore[attr-defined]
+        pw = cast(Any, source)
+        return tuple(pw.assets), np.asarray(pw.values, dtype=np.float64)
     # A plain mapping {asset: weight}.
     if isinstance(source, dict):
         return tuple(source.keys()), np.asarray(list(source.values()), dtype=np.float64)

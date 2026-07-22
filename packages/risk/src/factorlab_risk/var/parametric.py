@@ -26,7 +26,7 @@ from scipy import stats
 from factorlab_risk._validation import as_return_vector, check_confidence, tail_alpha
 from factorlab_risk.errors import RiskInputError
 
-__all__ = ["parametric_var", "parametric_expected_shortfall"]
+__all__ = ["parametric_expected_shortfall", "parametric_var"]
 
 
 def _moments(

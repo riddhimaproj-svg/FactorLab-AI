@@ -18,10 +18,10 @@ from factorlab_risk.errors import DimensionMismatchError, RiskInputError
 
 __all__ = [
     "FloatArray",
-    "as_return_vector",
-    "as_return_matrix",
-    "as_weights",
     "as_covariance",
+    "as_return_matrix",
+    "as_return_vector",
+    "as_weights",
     "check_confidence",
     "tail_alpha",
 ]

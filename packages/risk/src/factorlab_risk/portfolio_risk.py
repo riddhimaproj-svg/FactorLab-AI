@@ -26,23 +26,23 @@ from factorlab_risk._validation import (
 from factorlab_risk.errors import DimensionMismatchError, RiskInputError
 
 __all__ = [
+    "active_risk",
+    "beta",
+    "concentration_metrics",
+    "concentration_ratio",
+    "correlation_matrix",
+    "covariance_matrix",
+    "diversification_ratio",
+    "effective_number_of_assets",
+    "herfindahl_index",
+    "information_ratio",
     "portfolio_volatility",
-    "volatility",
+    "rolling_beta",
+    "rolling_correlation",
+    "rolling_covariance",
     "rolling_volatility",
     "tracking_error",
-    "active_risk",
-    "information_ratio",
-    "beta",
-    "rolling_beta",
-    "covariance_matrix",
-    "correlation_matrix",
-    "rolling_covariance",
-    "rolling_correlation",
-    "diversification_ratio",
-    "herfindahl_index",
-    "effective_number_of_assets",
-    "concentration_ratio",
-    "concentration_metrics",
+    "volatility",
 ]
 
 _ZERO_TOL = 1e-13
@@ -57,7 +57,7 @@ def portfolio_volatility(weights: object, covariance: object) -> float:
     cov = as_covariance(covariance)
     if cov.shape[0] != w.shape[0]:
         raise DimensionMismatchError(w.shape[0], cov.shape[0], name="covariance")
-    return float(np.sqrt(max(w @ cov @ w, 0.0)))
+    return float(np.sqrt(max(float(w @ cov @ w), 0.0)))
 
 
 def volatility(returns: object, periods_per_year: float = 252.0) -> float:
@@ -151,7 +151,7 @@ def covariance_matrix(returns_matrix: object, ddof: int = 1) -> FloatArray:
     r = as_return_matrix(returns_matrix)
     if r.shape[0] < 2:
         raise RiskInputError("need >= 2 observations for a covariance matrix")
-    return np.cov(r, rowvar=False, ddof=ddof)
+    return np.asarray(np.cov(r, rowvar=False, ddof=ddof), dtype=np.float64)
 
 
 def correlation_matrix(returns_matrix: object) -> FloatArray:
@@ -194,7 +194,7 @@ def diversification_ratio(weights: object, covariance: object) -> float:
     if cov.shape[0] != w.shape[0]:
         raise DimensionMismatchError(w.shape[0], cov.shape[0], name="covariance")
     asset_vols = np.sqrt(np.diag(cov))
-    vol = float(np.sqrt(max(w @ cov @ w, 0.0)))
+    vol = float(np.sqrt(max(float(w @ cov @ w), 0.0)))
     if vol <= _ZERO_TOL:
         return float("nan")
     return float((w @ asset_vols) / vol)

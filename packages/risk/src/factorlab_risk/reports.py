@@ -27,11 +27,11 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 __all__ = [
     "RiskContribution",
     "RiskDecomposition",
-    "RiskSnapshot",
-    "VaRReport",
-    "StressTestReport",
-    "ScenarioReport",
     "RiskReport",
+    "RiskSnapshot",
+    "ScenarioReport",
+    "StressTestReport",
+    "VaRReport",
 ]
 
 

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 __all__ = [
+    "DimensionMismatchError",
+    "InsufficientDataError",
     "RiskError",
     "RiskInputError",
-    "InsufficientDataError",
-    "DimensionMismatchError",
 ]
 
 

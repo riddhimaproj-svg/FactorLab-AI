@@ -31,16 +31,16 @@ from factorlab_risk._validation import (
 from factorlab_risk.errors import DimensionMismatchError, RiskInputError
 
 __all__ = [
-    "portfolio_volatility",
-    "marginal_contribution_to_risk",
+    "FactorRiskAttribution",
+    "asset_contribution",
     "component_contribution_to_risk",
+    "factor_risk_attribution",
+    "marginal_contribution_to_risk",
     "percentage_contribution_to_risk",
+    "portfolio_volatility",
     "risk_budget",
     "risk_budget_deviation",
-    "asset_contribution",
-    "factor_risk_attribution",
     "sector_risk_attribution",
-    "FactorRiskAttribution",
 ]
 
 
@@ -49,7 +49,7 @@ def portfolio_volatility(weights: object, covariance: object) -> float:
     cov = as_covariance(covariance)
     if cov.shape[0] != w.shape[0]:
         raise DimensionMismatchError(w.shape[0], cov.shape[0], name="covariance")
-    return float(np.sqrt(max(w @ cov @ w, 0.0)))
+    return float(np.sqrt(max(float(w @ cov @ w), 0.0)))
 
 
 def marginal_contribution_to_risk(weights: object, covariance: object) -> FloatArray:
@@ -99,11 +99,11 @@ class FactorRiskAttribution:
     """Result of a factor risk decomposition (immutable-by-convention)."""
 
     __slots__ = (
-        "total_variance",
-        "systematic_variance",
-        "specific_variance",
-        "factor_variance_contributions",
         "factor_exposures",
+        "factor_variance_contributions",
+        "specific_variance",
+        "systematic_variance",
+        "total_variance",
     )
 
     def __init__(

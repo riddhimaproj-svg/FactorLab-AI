@@ -23,6 +23,7 @@ from __future__ import annotations
 import numpy as np
 
 from factorlab_risk._validation import (
+    FloatArray,
     as_covariance,
     as_return_vector,
     as_weights,
@@ -35,23 +36,23 @@ from factorlab_risk.var.historical import (
 )
 
 __all__ = [
-    "monte_carlo_var",
     "monte_carlo_expected_shortfall",
     "monte_carlo_portfolio_var",
+    "monte_carlo_var",
     "simulate_portfolio_returns",
 ]
 
 
 def _simulate_univariate(
     mu: float, sigma: float, n: int, distribution: str, dof: float, rng: np.random.Generator
-) -> np.ndarray:
+) -> FloatArray:
     if distribution == "normal":
-        return rng.normal(mu, sigma, size=n)
+        return np.asarray(rng.normal(mu, sigma, size=n), dtype=np.float64)
     if distribution == "t":
         if dof <= 2.0:
             raise RiskInputError("t-distribution requires dof > 2 for finite variance")
         scale = np.sqrt((dof - 2.0) / dof)
-        return mu + sigma * scale * rng.standard_t(dof, size=n)
+        return np.asarray(mu + sigma * scale * rng.standard_t(dof, size=n), dtype=np.float64)
     raise RiskInputError(f"unknown distribution {distribution!r}")
 
 
@@ -125,7 +126,7 @@ def simulate_portfolio_returns(
         raise DimensionMismatchError(n, cov.shape[0], name="mean_vector/covariance")
     rng = np.random.default_rng(seed)
     asset_sims = rng.multivariate_normal(mu, cov, size=n_simulations)
-    return asset_sims @ w
+    return np.asarray(asset_sims @ w, dtype=np.float64)
 
 
 def monte_carlo_portfolio_var(
