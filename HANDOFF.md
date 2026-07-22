@@ -6,8 +6,9 @@ This document is the single source of truth for an engineer taking over the proj
 describes what exists, how it is built, the conventions that must be preserved, and what to build
 next. Read it end to end before writing code.
 
-> **Status at handoff:** six pure-Python analytics packages are complete, reviewed, and frozen
-> (or pending review). No API, no frontend, and no AI layer have been built yet — those are
+> **Status at handoff:** seven pure-Python analytics packages are complete, reviewed, and frozen
+> (or pending review) — the six-package research substrate plus the standalone **Derivatives
+> Engine** (Package 8). No API, no frontend, and no AI layer have been built yet — those are
 > deliberate future deliverables. Everything so far is a **pure computational library**.
 
 ---
@@ -27,14 +28,19 @@ API gateway (FastAPI, Python 3.12)               ← NOT built yet
         ├── Optimizer           (factorlab_optimizer)    ✅ built
         ├── Backtesting         (factorlab_backtesting)  ✅ built
         ├── Risk engine         (factorlab_risk)         ✅ built
+        ├── Derivatives engine  (factorlab_derivatives)  ✅ built  (standalone, Package 8)
         └── AI layer            (grounded LLM explain)   ← NOT built yet
 ```
 
-**What is actually implemented today** is the analytics substrate: six independently installable,
-fully-typed Python packages under `packages/`. They compose into the canonical research workflow:
+**What is actually implemented today** is the analytics substrate: seven independently installable,
+fully-typed Python packages under `packages/`. Six compose into the canonical research workflow;
+the seventh (`factorlab_derivatives`) is a **standalone options/derivatives pricing core** that
+does not participate in the factor-research pipeline:
 
 ```
 Market Data → Factor Model → Expected Returns → Optimizer → Portfolio → Backtester → Risk Engine → Reports
+
+Derivatives Engine (standalone):  Instruments + Market → Pricing / Greeks / Vol / Monte Carlo → Reports
 ```
 
 ### Guiding architectural principles (respected throughout)
@@ -59,6 +65,7 @@ factorlab_portfolio    (numpy)                          — standalone
 factorlab_optimizer    (numpy, scipy)                   — standalone
 factorlab_backtesting  (numpy, factorlab_portfolio; optimizer optional/lazy)
 factorlab_risk         (numpy, scipy; portfolio/optimizer/backtesting via lazy duck-typed bridges)
+factorlab_derivatives  (numpy, scipy)                   — standalone, ZERO internal deps
 ```
 
 **Key rule:** cross-package integration is done by **lazy imports and/or duck typing**, so each
@@ -101,10 +108,15 @@ factorlab-ai/
     │   └── src/factorlab_backtesting/ market_data.py, schedule.py, orders.py, costs.py, execution.py,
     │                                  strategy.py, benchmark.py, metrics.py, report.py, backtest.py,
     │                                  walkforward.py, errors.py
-    └── risk/                       factorlab_risk  (institutional risk engine)
-        └── src/factorlab_risk/     var/{historical,parametric,monte_carlo,rolling,decomposition}.py,
-                                    attribution.py, portfolio_risk.py, scenario.py, stress.py,
-                                    reports.py, integration.py, _validation.py, errors.py
+    ├── risk/                       factorlab_risk  (institutional risk engine)
+    │   └── src/factorlab_risk/     var/{historical,parametric,monte_carlo,rolling,decomposition}.py,
+    │                               attribution.py, portfolio_risk.py, scenario.py, stress.py,
+    │                               reports.py, integration.py, _validation.py, errors.py
+    └── derivatives/                factorlab_derivatives  (standalone options/derivatives engine)
+        └── src/factorlab_derivatives/ instruments.py, reports.py, greeks.py, implied_vol.py,
+                                    volatility.py, surface.py, monte_carlo.py, engine.py,
+                                    _validation.py, errors.py,
+                                    pricing/{black_scholes,black76,binomial,digital,barrier}.py
 ```
 
 Each package is a standard `src/`-layout project with its own `pyproject.toml`, `README.md`, and
@@ -115,7 +127,7 @@ yet** (no `turbo.json`, no workspace `pyproject`); packages are managed individu
 
 ## 3. Completed packages
 
-All six are ruff-clean, mypy-strict-clean, and exceed 95% coverage (data is 92%, see note).
+All seven are ruff-clean, mypy-strict-clean, and exceed 95% coverage (data is 92%, see note).
 
 | Package | Purpose | Public highlights | Tests | Cov | Status |
 |---|---|---|---|---|---|
@@ -124,7 +136,8 @@ All six are ruff-clean, mypy-strict-clean, and exceed 95% coverage (data is 92%,
 | **factorlab_portfolio** | Immutable portfolio models + analytics | `Position`, `Holding`, `Trade`, `Portfolio`, `PortfolioSnapshot`, `ReturnSeries`, `PerformanceReport`; analytics (Sharpe/Sortino/Calmar/Omega/drawdown/rolling/relative) | 111 | 99% | **Approved (frozen)** |
 | **factorlab_optimizer** | Portfolio optimization | `OptimizationProblem`, `OptimizerConfig`, `Constraint`, `PortfolioWeights`, `OptimizationResult`, `EfficientFrontier`; 6 optimizers (MinVar, MeanVar, MaxSharpe, MaxDiversification, RiskParity, BlackLitterman) | 85 | 99% | **Approved (frozen)** |
 | **factorlab_backtesting** | Event-driven backtester | `Backtest`, `Strategy` (Static/Equal/Optimizer), `RebalanceSchedule`, `ExecutionEngine`, `Order`/`Fill`/`OrderBook`, cost/slippage/broker models, `Benchmark`, `BacktestReport`, `WalkForward` | 86 | 99% | **Approved (frozen)** |
-| **factorlab_risk** | Market & portfolio risk | VaR/ES (historical/parametric/MC/rolling), VaR decomposition, attribution, portfolio risk, stress, scenarios, reports, integration | 121 | 98% | **Complete — pending review** |
+| **factorlab_risk** | Market & portfolio risk | VaR/ES (historical/parametric/MC/rolling), VaR decomposition, attribution, portfolio risk, stress, scenarios, reports, integration | 121 | 98% | **Approved (frozen)** |
+| **factorlab_derivatives** | Options / derivatives pricing engine (Package 8, standalone) | `price_option`/`PricingMethod`; Black-Scholes, Black-76, CRR binomial (Euro+American), digital, barrier; analytical + finite-diff `Greeks`; `implied_volatility` (Newton+Brent); historical/EWMA/GARCH(1,1) vol; `VolatilitySurface`; `monte_carlo_european` (antithetic+control variates) | 149 | 99% | **Complete — pending review** |
 
 > **factorlab_data coverage note:** 92% is the approved baseline; its integration surface
 > (`load()` network path) is intentionally exercised only through injected fetchers, not live I/O.
@@ -132,8 +145,54 @@ All six are ruff-clean, mypy-strict-clean, and exceed 95% coverage (data is 92%,
 ### Frozen packages
 `factorlab_optimizer` and `factorlab_backtesting` are explicitly **frozen** — do not modify unless
 a critical bug or integration issue is found. The approved models/infra in `factorlab_quant`,
-`factorlab_data`, and `factorlab_portfolio` are likewise frozen. `factorlab_risk` is the most
-recent deliverable and is awaiting review.
+`factorlab_data`, `factorlab_portfolio`, and `factorlab_risk` are likewise frozen.
+`factorlab_derivatives` is the most recent deliverable and is **awaiting review** (treat as
+complete-but-not-yet-frozen; do not build on top of it until approved).
+
+### 3.1 Derivatives Engine (Package 8) — architecture & public API
+
+**Independent by design:** `factorlab_derivatives` depends only on numpy + scipy and imports
+**nothing** from the other six packages (and they import nothing from it). Same house rules apply:
+hexagonal layering with dependencies pointing inward, validation-first, immutable + serializable
+public results (`frozen=True, slots=True`, `to_dict`/`from_dict`).
+
+**Internal layering (inner ← outer, dependencies point inward only):**
+
+```
+core primitives     instruments · reports · greeks · _validation · errors     (numpy/scipy only)
+models              pricing/{black_scholes,black76,binomial,digital,barrier} · volatility ·
+                    surface · monte_carlo · implied_vol                         (compose the core)
+façade              engine.price_option  →  dispatches Euro→Black-Scholes, American→binomial
+```
+
+**Conventions (documented in `_validation.py`):** rates/yields/vols are annualized decimals;
+maturity `T` in years; Greeks are raw partials (`vega = ∂V/∂σ`, `rho = ∂V/∂r`, `theta = ∂V/∂t` per
+**year**). Enums are `StrEnum` (Python 3.11+) for clean string serialization.
+
+**Public API surface (`from factorlab_derivatives import …`):**
+
+| Group | Exports |
+|---|---|
+| Instruments / market | `OptionType`, `ExerciseStyle`, `BarrierType`, `DigitalKind`, `Option`, `DigitalOption`, `BarrierOption`, `MarketData` |
+| Results | `Greeks`, `PricingResult`, `MonteCarloResult`, `ImpliedVolatilityResult` |
+| Pricing | `black_scholes_price` / `black_scholes_greeks`, `black76_price` / `black76_greeks`, `binomial_price`, `digital_price`, `barrier_price`, `d1_d2` |
+| Engine (façade) | `price_option`, `PricingMethod` |
+| Greeks | `finite_difference_greeks` |
+| Volatility | `implied_volatility`, `historical_volatility`, `ewma_variance`, `ewma_volatility`, `fit_garch`, `GarchResult`, `VolatilitySurface` |
+| Monte Carlo | `monte_carlo_european` |
+| Errors | `DerivativesError`, `DerivativesInputError`, `ConvergenceError`, `NoArbitrageError` |
+
+**Model notes / gotchas future work must preserve:**
+- **Black-76 `rho = −T · price`** (the forward is observed directly and does not move with `r`) —
+  intentionally different from Black-Scholes rho.
+- **Barrier options** are priced by Reiner–Rubinstein closed forms assuming **continuous
+  monitoring, no rebate**; knock-outs use exact in/out parity (`in + out = vanilla`).
+- **American options** have no closed-form Greeks — the engine returns finite-difference Greeks over
+  the CRR binomial price.
+- **Implied vol** solver is Newton-Raphson with a **bracketed Brent fallback**, guarded by static
+  no-arbitrage bounds (raises `NoArbitrageError` for unreachable prices).
+- **Monte Carlo** simulates the exact GBM terminal price with optional antithetic + control variates
+  and reports a standard error / 95% CI.
 
 ---
 
@@ -154,12 +213,13 @@ In rough dependency order:
 4. **Frontend** (`apps/web`, Next.js 15 / TS / Tailwind / shadcn / Plotly / React Query / Zustand).
    **Not started.**
 5. **AI layer** (grounded LLM explanation with citations). **Not started.**
-6. **Derivatives / options pricing (Black–Scholes), general Monte-Carlo simulation framework.**
-   **Explicitly excluded** so far. (Note: *Monte Carlo VaR* IS implemented in `factorlab_risk` —
-   that is risk estimation from a fitted return distribution, distinct from a pricing/path-sim
-   engine.)
+6. ~~Derivatives / options pricing (Black–Scholes), general Monte-Carlo simulation framework.~~
+   ✅ **DONE** — delivered as the standalone `factorlab_derivatives` package (Package 8); see §3 and
+   §3.1. (Note: `factorlab_derivatives.monte_carlo` is an option **pricing** path-sim engine; the
+   *Monte Carlo VaR* in `factorlab_risk` is a distinct risk estimator from a fitted return
+   distribution — the two do not overlap or depend on each other.)
 
-Do **not** begin the API, frontend, AI layer, or derivatives without explicit instruction.
+Do **not** begin the API, frontend, or AI layer without explicit instruction.
 
 ---
 
@@ -271,14 +331,14 @@ integration tests resolve. There is no CI pipeline yet — gates are run manuall
 3. ✅ Portfolio analytics.
 4. ✅ Optimizer.
 5. ✅ Backtesting.
-6. ✅ Risk engine *(pending review at handoff).*
-7. ⏭ **Next:** see §10.
-8. ⏳ Remaining factor models (q-factor, APT).
-9. ⏳ Additional data adapters (market/fundamentals/macro/news).
-10. ⏳ API service (FastAPI).
-11. ⏳ Frontend (Next.js).
-12. ⏳ AI explanation layer.
-13. ⛔ Derivatives / Black–Scholes / general Monte-Carlo (explicitly out of scope until requested).
+6. ✅ Risk engine *(approved / frozen).*
+7. ✅ **Derivatives engine** (`factorlab_derivatives`, Package 8) — *complete, pending review.*
+8. ⏭ **Next:** see §10.
+9. ⏳ Remaining factor models (q-factor, APT).
+10. ⏳ Additional data adapters (market/fundamentals/macro/news).
+11. ⏳ API service (FastAPI).
+12. ⏳ Frontend (Next.js).
+13. ⏳ AI explanation layer.
 
 The project has been built **strictly one component at a time, stopping for review before the
 next.** Preserve this cadence — do not batch multiple deliverables.
@@ -287,7 +347,10 @@ next.** Preserve this cadence — do not batch multiple deliverables.
 
 ## 10. What to build next
 
-**Recommended next unit: the Hou–Xue–Zhang q-factor model** (or Carhart-style momentum is done;
+> **Immediate gate:** the Derivatives Engine (Package 8) is complete and **awaiting review**. Do not
+> start the next unit until it is reviewed/approved and frozen. Nothing below has been started.
+
+**Recommended next unit: the Hou–Xue–Zhang q-factor model** (Carhart-style momentum is done;
 q-factor and APT remain) inside `factorlab_quant`. It is the smallest, highest-value increment and
 exercises the frozen framework exactly as intended.
 
@@ -320,6 +383,14 @@ substrate before the transport/UX layers.
   code):** in the property test, skip series whose std is below the tolerance (or assert with a
   tolerance-aware equality). It fails deterministically now because Hypothesis cached the
   counterexample under `packages/portfolio/.hypothesis/`.
+- **`factorlab_derivatives` (Package 8) — two intentionally-uncovered defensive lines.** Coverage is
+  99% (line+branch); the only misses are two guards **inside the SciPy optimizer callback** in
+  `volatility.py` (`_garch_neg_loglik`): the `variance ≤ 0` mid-search rejection and the MLE
+  non-convergence `ConvergenceError`. They are not deterministically reachable without mocking
+  optimizer internals, so they were left uncovered rather than tested via fragile mocks. Not a bug.
+- **`factorlab_derivatives` barrier pricing assumes continuous monitoring, no rebate.** Discrete-
+  monitoring correction and rebates are out of scope; documented in `pricing/barrier.py`. A path-sim
+  sanity test uses a loose tolerance because discrete monitoring slightly over-prices knock-outs.
 - **`factorlab_data` has only one adapter** (Kenneth French). The `FactorDataPort` contract and the
   shared adapter-contract test are in place for adding more; nothing else is wired.
 - **No CI.** Quality gates are run manually. A future TODO is a CI workflow running ruff/mypy/pytest
@@ -354,6 +425,10 @@ substrate before the transport/UX layers.
    parts of quant/data/portfolio must not be modified without explicit approval, even to fix a flaky
    test — surface it instead (see §11).
 10. **One component at a time, stop for review.** This is the established working agreement; keep it.
+11. **The derivatives engine stays standalone.** `factorlab_derivatives` imports nothing internal and
+    nothing internal imports it. Keep it dependency-light (numpy/scipy only). Its Black-76 rho sign
+    (`−T·price`), per-year theta, annualized-decimal conventions, and continuous-monitoring barrier
+    assumption must be preserved for backwards compatibility.
 
 ---
 
