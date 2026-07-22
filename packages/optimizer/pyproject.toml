@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "factorlab-optimizer"
+version = "0.1.0"
+description = "Portfolio optimization engine: mean-variance, risk parity, Black-Litterman, efficient frontier."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "FactorLab AI" }]
+keywords = ["quant", "finance", "portfolio-optimization", "markowitz", "black-litterman", "risk-parity"]
+classifiers = [
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
+
+# Pure numerics.  SciPy provides the constrained solver (SLSQP).
+dependencies = ["numpy>=1.26", "scipy>=1.11"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "mypy>=1.10",
+    "ruff>=0.5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/factorlab_optimizer"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "property: property-based invariants (Hypothesis)",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+disallow_any_generics = true
+
+[[tool.mypy.overrides]]
+module = ["scipy.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+# N803/N806/N812: math + module-alias notation.  RUF001-003: allow Greek/math
+# unicode (Sigma, mu, proportional-to) in docstrings of this math-heavy package.
+ignore = ["N803", "N806", "N812", "RUF001", "RUF002", "RUF003"]
+
+[tool.coverage.run]
+source = ["factorlab_optimizer"]
+branch = true

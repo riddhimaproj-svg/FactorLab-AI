@@ -1,0 +1,85 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "factorlab-quant"
+version = "0.2.0"
+description = "Institutional-grade multi-factor asset-pricing engine. Pure, typed, side-effect-free analytics."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "FactorLab AI" }]
+keywords = ["quant", "finance", "asset-pricing", "capm", "factor-models", "econometrics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Typing :: Typed",
+]
+
+# The engine depends ONLY on the numerical stack. No web, no DB, no I/O.
+# This is what makes it independently installable and usable from a notebook,
+# a CLI, a batch job, or the FastAPI service.
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+pandas = ["pandas>=2.1"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "statsmodels>=0.14",   # used ONLY in tests to cross-validate our math
+    "pandas>=2.1",
+    "mypy>=1.10",
+    "ruff>=0.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/factorlab-ai/factorlab"
+Documentation = "https://github.com/factorlab-ai/factorlab/tree/main/packages/quant"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/factorlab_quant"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "property: property-based invariants (Hypothesis)",
+    "validation: cross-validation against statsmodels reference",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+disallow_any_generics = true
+plugins = []
+
+# SciPy does not ship type stubs; treat it as untyped at the boundary.
+[[tool.mypy.overrides]]
+module = ["scipy.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+# `X` (design matrix) and `y` follow universal econometric / ML notation; the
+# uppercase design matrix is intentional and matches statsmodels and sklearn.
+ignore = ["N803", "N806"]
+
+[tool.coverage.run]
+source = ["factorlab_quant"]
+branch = true
