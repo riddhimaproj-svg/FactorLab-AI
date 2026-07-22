@@ -159,7 +159,7 @@ def correlation_matrix(returns_matrix: object) -> FloatArray:
     r = as_return_matrix(returns_matrix)
     if r.shape[0] < 2:
         raise RiskInputError("need >= 2 observations for a correlation matrix")
-    return np.corrcoef(r, rowvar=False)
+    return np.asarray(np.corrcoef(r, rowvar=False), dtype=np.float64)
 
 
 def rolling_covariance(returns_matrix: object, window: int) -> FloatArray:

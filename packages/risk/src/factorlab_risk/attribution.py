@@ -126,11 +126,15 @@ class FactorRiskAttribution:
 
     @property
     def systematic_fraction(self) -> float:
-        return self.systematic_variance / self.total_variance if self.total_variance else float("nan")
+        if not self.total_variance:
+            return float("nan")
+        return self.systematic_variance / self.total_variance
 
     @property
     def specific_fraction(self) -> float:
-        return self.specific_variance / self.total_variance if self.total_variance else float("nan")
+        if not self.total_variance:
+            return float("nan")
+        return self.specific_variance / self.total_variance
 
     def to_dict(self) -> dict[str, object]:
         return {

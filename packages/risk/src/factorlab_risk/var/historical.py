@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from factorlab_risk._validation import FloatArray, as_return_vector, tail_alpha
+from factorlab_risk._validation import as_return_vector, tail_alpha
 
 __all__ = [
     "historical_expected_shortfall",
@@ -48,7 +48,7 @@ def historical_expected_shortfall(
     alpha = tail_alpha(confidence)
     quantile = float(np.quantile(r, alpha, method="linear"))
     tail = r[r <= quantile]
-    if tail.size == 0:
+    if tail.size == 0:  # pragma: no cover - defensive; the min always satisfies r <= q
         tail = np.array([quantile])
     return float(-float(np.mean(tail)) * np.sqrt(horizon))
 
@@ -62,7 +62,3 @@ def worst_loss(returns: object) -> float:
     """The single worst realized loss (positive magnitude)."""
     r = as_return_vector(returns)
     return float(-np.min(r))
-
-
-def _empirical_quantile(returns: FloatArray, alpha: float) -> float:
-    return float(np.quantile(returns, alpha, method="linear"))
